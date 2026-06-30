@@ -1,239 +1,1395 @@
 # Plugin Model
 
-> **STATIS Intelligence Layer (SIL)**  
+> **STATIS Intelligence Layer (SIL)**
 > **Plugin Model**
 
 **Document:** `30_Plugin_Model.md`  
-**Version:** 0.1 (Draft)  
+**Version:** 0.2 (Draft)  
 **Status:** Core Architecture  
 **Owner:** SIL Core  
 **Audience:** Software architects, backend developers, plugin developers, AI engineers, future contributors
 
-## Purpose
+---
 
-The **Plugin Model** defines how third-party or custom extensions integrate with SIL. A *Plugin* is a bundled component that contributes definitions and integrations, such as new Flows, Capabilities, Tools, Agents (Personas), Context Providers, Policies, and Approval rules. Plugins allow the platform to remain flexible and extensible while maintaining deterministic control. 
+# Purpose
 
-In SIL, Plugins do **not** execute business logic directly. Instead, each Plugin provides static metadata and integration code that the SIL core uses to extend its functionality. For example, a Plugin for a CI/CD system might declare a new Capability to start a pipeline job, a Tool that knows how to call the pipeline application, and a Flow that orchestrates those steps. By packaging this as a Plugin, all new operations can be added without modifying SIL’s core. 
+The Plugin Model defines how applications integrate with the STATIS Intelligence Layer (SIL).
 
-The Plugin Model exists to support SIL’s commitment to *Plugin-based extensibility* and *layered determinism*. Plugins are first-class extension units that register their contributions with SIL. This explicit registration ensures that all additions are visible to the SIL registry components (Flows, Capabilities, Tools, Agents, etc.) and are subject to the same governance (Policy and Approval) as core platform actions. In this way, the SIL core remains agnostic to the specifics of each Plugin while preserving auditability and explainability of every decision and execution step.
+Rather than treating Plugins as optional extensions, SIL considers Plugins to be first-class architectural building blocks.
 
-## Responsibilities and Boundaries
+Every business application that participates in the SIL ecosystem does so through a Plugin.
 
-The Plugin Manager component of SIL is responsible for loading and registering Plugin contributions. Each Plugin declares its identity (a unique `id`, name, version, etc.) and explicitly lists any provided Flows, Capabilities, Tools, Agents, Context Providers, Policies, or Approval rules. Upon installation or startup, SIL validates the Plugin’s manifest and registers all declared definitions in the appropriate registries (Flow Registry, Capability Registry, Tool Registry, etc.). SIL ensures that each resource (flow, capability, tool, etc.) receives a unique identifier, and that any conflicts (duplicate IDs or incompatible versions) are detected and reported.
+A Plugin represents the complete architectural boundary between an application and the SIL Core.
 
-Plugins are *declarative and integrative*, not autonomous executors. They declare *what* resources they provide and may supply adapter or integration code, but they do not decide *when* or *how* to use those resources. The Planning Engine and Flow Engine retain control over scheduling and invocation according to the user’s Request and system policies.
+It contributes metadata, integration definitions and implementation adapters that allow SIL to understand what an application can do without becoming coupled to how the application is implemented.
 
-Plugins must not bypass SIL’s governance layers. They cannot invoke an application directly without using a registered Tool, nor can they skip any required Policy or Approval checks. Any action provided by a Plugin is subject to the same policy evaluation and approval workflows as core capabilities.
+The Plugin Model therefore enables SIL to remain application-independent while allowing each application to evolve independently.
 
-In terms of boundaries, the Plugin Model defines only how extensions are declared and registered. It does not prescribe execution semantics or user interface behavior. Plugins do not handle authentication or direct user input; they simply augment the SIL model of available operations. Error handling for Plugins is managed by the SIL core: if a Plugin fails validation or execution, the platform should handle it gracefully (for example, by aborting the Request or rolling back) to keep the system stable and predictable.
+Plugins extend the platform.
 
-## Processing Model
+# Plugin Discovery
 
-The Plugin loading process follows two high-level phases: registration and consumption. In the **registration** phase, SIL processes the Plugin manifest and registers each declared resource in the appropriate registry. For example, new Flows are added to the Flow Registry, new Capabilities to the Capability Registry, and new Tools to the Tool Registry. Each contributed resource is stored with the Plugin’s ID, making explicit which Plugin provided it. SIL also validates all identifiers and dependencies, catching any conflicts (such as duplicate IDs or incompatible versions) before runtime.
+SIL intentionally separates Plugin discovery from Plugin execution.
 
-The **consumption** phase refers to normal request processing after Plugins are loaded. Once a Plugin’s contributions are registered, they become part of the execution environment. When the Planning Engine constructs an Execution Plan, it can select Flows and Capabilities that originated from any Plugin. At runtime, the Flow Engine executes these Flows and invokes the corresponding Tools, treating plugin-provided components exactly like core components. Because all Plugin additions were recorded in advance, request processing proceeds without any further Plugin-specific steps.
+The platform must always know **which Plugins exist** before it attempts to process a Request.
 
-The following diagram illustrates the Plugin processing model:
+Plugin discovery is therefore a platform responsibility rather than a runtime concern.
+
+The discovery mechanism itself is implementation-independent.
+
+A deployment may choose one or more discovery strategies without changing the architectural model.
+
+Typical discovery mechanisms include:
+
+- local plugin directories
+- enterprise Plugin repositories
+- OCI registries
+- Git repositories
+- package managers
+- cloud-based Plugin registries
+
+Regardless of how Plugins are discovered, every Plugin enters the same validation and registration pipeline.
+
+The Flow Engine, Planning Engine and other runtime components never perform Plugin discovery themselves.
+
+---
+
+# Plugin Packaging
+
+A Plugin is distributed as a self-contained package.
+
+The package contains everything required for SIL to understand and integrate the application.
+
+A typical Plugin package may be organized as follows.
+
+```text
+pipeline-plugin/
+
+├── plugin.yaml
+├── capabilities/
+├── flows/
+├── tools/
+├── context/
+├── policies/
+├── approvals/
+├── personas/
+├── agents/
+├── assets/
+└── README.md
+```
+
+Every Plugin package contains exactly one manifest.
+
+The manifest represents the entry point into the Plugin.
+
+Everything else is discovered through the manifest.
+
+The package should be immutable after publication.
+
+Updating a Plugin creates a new Plugin version rather than modifying an existing one.
+
+This simplifies auditing, reproducibility and rollback.
+
+---
+
+# Plugin Namespace Strategy
+
+One of the primary goals of the Plugin Model is to prevent identifier collisions.
+
+Every resource contributed by a Plugin belongs to a globally unique namespace.
+
+Typical examples include:
+
+```text
+pipeline.job.run
+
+pipeline.job.logs.read
+
+pipeline.job.promote
+
+pipeline.git.commit
+
+sudreg.company.search
+
+sudreg.company.read
+
+catalog.dataset.search
+
+catalog.dataset.lineage
+```
+
+Namespaces provide several important architectural benefits.
+
+They:
+
+- prevent naming conflicts;
+- reveal application ownership;
+- simplify discovery;
+- improve readability;
+- enable deterministic resolution;
+- allow future Plugin composition.
+
+Namespaces should remain stable across Plugin versions whenever possible.
+
+Changing identifiers should be treated as a breaking change.
+
+---
+
+# Plugin Ownership Model
+
+Every architectural resource belongs to exactly one Plugin.
+
+Ownership is exclusive.
+
+Examples include:
+
+| Resource | Owner |
+|----------|-------|
+| `pipeline.job.run` | Pipeline Plugin |
+| `pipeline.job.logs` | Pipeline Plugin |
+| `sudreg.company.read` | Sudreg Plugin |
+| `catalog.dataset.search` | Catalogue Plugin |
+
+This ownership model ensures that responsibility remains unambiguous.
+
+No Plugin should redefine another Plugin's Capability.
+
+No Plugin should replace another Plugin's Flow.
+
+No Plugin should modify another Plugin's Policies.
+
+Plugins may collaborate.
+
+They never own each other's assets.
+
+---
+
+# Plugin Isolation
+
+Plugins are intentionally isolated.
+
+The objective is to eliminate hidden dependencies between applications.
+
+A Plugin cannot directly invoke another Plugin.
+
+Instead, every interaction must occur through SIL.
+
+Conceptually:
 
 ```mermaid
 graph LR
-    PL[Plugin Package]
-    PL -->|Manifest + Contributions| VD[Validate & Load]
-    VD --> CR[Capability Registry]
-    VD --> TR[Tool Registry]
-    VD --> FR[Flow Registry]
-    VD --> AR[Agent Registry]
-    VD --> PE[Policy Engine]
-    VD --> AE[Approval Engine]
-    VD --> CE[Context Engine]
-    CR --> FlowEngine[Flow Engine (execution)]
-    FR --> FlowEngine
-    TR --> FlowEngine
-    AR --> FlowEngine
-    PE --> FlowEngine
-    AE --> FlowEngine
-    CE --> FlowEngine
+
+PluginA --> CapabilityRegistry
+
+CapabilityRegistry --> PlanningEngine
+
+PlanningEngine --> FlowEngine
+
+FlowEngine --> CapabilityRegistry
+
+CapabilityRegistry --> PluginB
 ```
 
-In this diagram, a *Plugin Package* provides a manifest and component definitions, which the SIL core validates and uses to update its registries. Later, the Flow Engine consumes these registered definitions as needed to execute an Execution Plan.
+This architecture ensures that:
 
-## Plugin Definition Model
+- Plugin implementations remain independent;
+- applications do not become tightly coupled;
+- orchestration remains visible;
+- auditing remains complete;
+- execution remains deterministic.
 
-A Plugin is described by a structured manifest (typically a YAML or JSON file) that includes its metadata and contributions. A basic Plugin manifest might look like:
+Plugin-to-Plugin communication is therefore mediated by the SIL runtime rather than implemented through direct dependencies.
+
+---
+
+# Plugin Dependency Model
+
+Some Plugins naturally depend on other Plugins.
+
+For example:
+
+- an enterprise reporting Plugin may require the Catalogue Plugin;
+- an analytics Plugin may require Pipeline metadata;
+- an administration Plugin may require authentication capabilities.
+
+Dependencies must always be declared explicitly.
+
+Hidden dependencies are not allowed.
+
+Dependencies may be:
+
+| Type | Description |
+|------|-------------|
+| Required | Plugin cannot load without dependency |
+| Optional | Additional functionality becomes available if dependency exists |
+| Versioned | Minimum compatible version required |
+| Incompatible | Plugin versions that must not coexist |
+
+Circular dependencies should be rejected during validation.
+
+Dependency resolution occurs before registration.
+
+The runtime assumes that every enabled Plugin already satisfies all declared dependencies.
+
+---
+
+# Plugin Loading Pipeline
+
+Plugin loading follows a deterministic sequence.
+
+```mermaid
+flowchart LR
+
+Package
+
+--> Manifest
+
+--> Validation
+
+--> Dependency Resolution
+
+--> Registration
+
+--> Reference Resolution
+
+--> Enable
+
+--> Runtime
+```
+
+Each stage has a clearly defined responsibility.
+
+## Manifest Loading
+
+The Plugin manifest is parsed.
+
+Basic metadata becomes available.
+
+---
+
+## Validation
+
+The platform verifies:
+
+- schema validity;
+- required fields;
+- identifier uniqueness;
+- version compatibility;
+- contribution consistency.
+
+Invalid Plugins never reach the runtime.
+
+---
+
+## Dependency Resolution
+
+Required Plugins are located.
+
+Compatibility is verified.
+
+Missing dependencies prevent registration.
+
+---
+
+## Registration
+
+Resources are inserted into the corresponding registries.
+
+Registration is transactional.
+
+Either all contributions become visible or none do.
+
+---
+
+## Reference Resolution
+
+Cross-references between Flows, Capabilities and Tools are verified.
+
+Examples include:
+
+- Flow references existing Capability;
+- Tool implements declared Capability;
+- Policy identifiers exist;
+- Approval definitions are available.
+
+Broken references invalidate the entire Plugin.
+
+---
+
+## Enable
+
+After successful registration the Plugin becomes available for Request planning.
+
+At this point the Plugin is indistinguishable from built-in platform resources.
+
+The runtime no longer distinguishes whether a Capability originated from SIL Core or from a Plugin.
+
+Only the Audit subsystem retains Plugin provenance for traceability.
+
+# Plugin Contract
+
+Every Plugin accepted by SIL implicitly agrees to a common architectural contract.
+
+The contract guarantees that every Plugin behaves predictably and integrates consistently with the platform.
+
+The purpose of the contract is not to constrain Plugin developers.
+
+Its purpose is to preserve deterministic behaviour across the entire platform.
+
+Every Plugin therefore guarantees the following properties.
+
+---
+
+## Deterministic Behaviour
+
+Given identical inputs and identical application state, a Plugin must expose identical behaviour.
+
+Plugins must never introduce randomness into orchestration.
+
+Randomness, heuristics or AI reasoning may exist inside external applications or AI Agents, but never inside Plugin orchestration.
+
+---
+
+## Explicit Metadata
+
+Every contributed resource must be declared.
+
+There are no implicit Flows.
+
+There are no hidden Capabilities.
+
+There are no dynamically generated Tools.
+
+Everything visible to SIL must first appear in Plugin metadata.
+
+This allows complete explainability.
+
+---
+
+## Stable Identity
+
+Every resource contributed by a Plugin has a globally unique identifier.
+
+Identifiers should remain stable across Plugin versions.
+
+Changing an identifier should be treated as a breaking change.
+
+Stable identifiers allow:
+
+- deterministic planning
+- reproducible execution
+- reliable auditing
+- backwards compatibility
+
+---
+
+## Complete Traceability
+
+Every execution performed through a Plugin must remain traceable.
+
+Audit records should always identify:
+
+- Plugin
+- Plugin Version
+- Capability
+- Tool
+- Flow
+- Application
+- Request
+
+This information enables complete reconstruction of every execution.
+
+---
+
+## Platform Compliance
+
+Plugins become part of SIL.
+
+Consequently they must comply with all platform principles.
+
+This includes:
+
+- deterministic execution
+- explainability
+- auditability
+- Policy evaluation
+- Approval processing
+- Flow orchestration
+
+A Plugin cannot selectively ignore platform rules.
+
+---
+
+# Behavioural Rules
+
+The following architectural rules always apply.
+
+## Plugins are passive
+
+Plugins never initiate execution.
+
+They contribute knowledge.
+
+The runtime performs execution.
+
+---
+
+## Plugins never own Requests
+
+Requests belong exclusively to SIL.
+
+Plugins receive execution only after Planning has completed.
+
+---
+
+## Plugins never perform Planning
+
+Selecting Flows is the responsibility of the Planning Engine.
+
+Plugins merely provide candidate Flows.
+
+---
+
+## Plugins never bypass Policies
+
+Every Plugin operation passes through Policy evaluation.
+
+There are no privileged Plugins.
+
+Core Plugins and third-party Plugins are treated identically.
+
+---
+
+## Plugins never bypass Approval
+
+Approval decisions belong exclusively to the Approval Engine.
+
+Plugins cannot force execution.
+
+They cannot suppress approval requirements.
+
+---
+
+## Plugins never invoke each other directly
+
+Cross-application execution always passes through SIL.
+
+This preserves visibility.
+
+Example:
+
+```text
+Incorrect
+
+Pipeline Plugin
+
+↓
+
+Sudreg Plugin
+
+
+
+Correct
+
+Pipeline Plugin
+
+↓
+
+Capability Registry
+
+↓
+
+Planning Engine
+
+↓
+
+Flow Engine
+
+↓
+
+Capability Registry
+
+↓
+
+Sudreg Plugin
+```
+
+---
+
+## Plugins are immutable during Request execution
+
+Plugin loading occurs between Requests.
+
+A Request always executes against a stable Plugin landscape.
+
+The runtime never loads, unloads or upgrades Plugins while a Request is executing.
+
+This guarantees deterministic behaviour.
+
+---
+
+## Plugins own only their own resources
+
+A Plugin may reference another Plugin's Capability through SIL.
+
+It may never redefine it.
+
+Ownership is exclusive.
+
+---
+
+## Plugins contribute metadata
+
+Plugins describe:
+
+- what exists
+- what can be executed
+- how execution is performed
+
+They never decide:
+
+- when execution occurs
+- why execution occurs
+- whether execution is allowed
+
+These responsibilities remain inside SIL Core.
+
+---
+
+# Plugin Composition
+
+Although Plugins remain isolated, they may participate in the same Execution Plan.
+
+This enables cross-application orchestration without creating architectural coupling.
+
+Consider the following example.
+
+A user asks:
+
+> Explain why yesterday's production deployment failed and identify the affected companies.
+
+The resulting Execution Plan may involve multiple Plugins.
+
+```mermaid
+graph LR
+
+R[Request]
+
+--> P[Planning Engine]
+
+P --> PF[Pipeline Plugin]
+
+P --> SF[Sudreg Plugin]
+
+PF --> FE[Flow Engine]
+
+SF --> FE
+
+FE --> Audit
+```
+
+Neither Plugin communicates directly.
+
+Instead, both participate in a common orchestration coordinated by SIL.
+
+This model enables enterprise workflows spanning multiple applications while preserving application independence.
+
+---
+
+# Plugin Evolution
+
+Plugins are expected to evolve independently.
+
+Typical evolution includes:
+
+- new Capabilities;
+- new Flows;
+- additional Context Providers;
+- new Tool implementations;
+- updated Policies;
+- improved Personas.
+
+The architectural contract remains stable.
+
+Plugin evolution should therefore occur through additive changes whenever possible.
+
+Breaking changes should be introduced only through major Plugin versions.
+
+This minimizes disruption to existing Flows and Execution Plans.
+
+---
+
+# Plugin Compatibility
+
+Every Plugin declares compatibility with a particular SIL Core version.
+
+Compatibility is evaluated before registration.
+
+Typical compatibility checks include:
+
+- SIL version;
+- required registries;
+- supported manifest version;
+- dependency versions;
+- required runtime features.
+
+Plugins failing compatibility validation are rejected before becoming available.
+
+The runtime never attempts partial compatibility.
+
+Either a Plugin is compatible...
+
+or it is not loaded.
+
+---
+
+# Plugin Security Model
+
+Plugins extend the platform.
+
+They do not weaken it.
+
+Consequently every Plugin operates within the same security boundaries.
+
+Plugins never receive unrestricted platform access.
+
+Instead they interact with SIL through explicit extension points.
+
+Examples include:
+
+- Capability registration
+- Tool registration
+- Context Providers
+- Flow definitions
+- Policy definitions
+- Approval rules
+
+Every execution still follows the normal Request pipeline.
+
+No architectural shortcuts exist for Plugins.
+
+This guarantees that introducing a new Plugin cannot silently bypass platform governance.
+
+
+# Examples
+
+The following examples illustrate how the Plugin Model behaves in realistic enterprise scenarios.
+
+---
+
+## Example 1 — Pipeline Plugin
+
+The Pipeline Plugin contributes everything required to expose the STATIS Pipeline application to SIL.
 
 ```yaml
 plugin:
   id: pipeline
-  name: "CI/CD Pipeline Plugin"
   version: 1.0
-  description: Provides pipeline job management flows and tools.
-  dependencies:
-    - core>=1.0
-  contributions:
-    flows:
-      - pipeline.job.run_and_summarize
-    capabilities:
-      - pipeline.job.run
-    tools:
-      - pipeline.job.run.default
-    agents:
-      - pipeline.reporter
-    context_enrichers:
-      - pipeline_user_context
-    policies:
-      - name: "Pipeline Execution Policy"
-        file: pipeline-policy.yaml
-    approvals:
-      - name: "PipelineApproval"
-        file: pipeline-approval.yaml
-```
 
-In this example:
-- `id`, `name`, and `version` identify the Plugin and allow SIL to manage different versions.
-- `dependencies` may list required minimum versions of SIL or other plugins.
-- Under `contributions`, the Plugin lists the IDs of each resource it provides: flows, capabilities, tools, agents (personas), context enrichers, policies, and approval rules. The actual definitions of these contributions (for example, the YAML for the flow or the policy rules) would be included in separate files (like `pipeline-policy.yaml`).
-- Each contributed Capability or Tool would also include its own definition that references this plugin, for example:
-
-```yaml
-capability:
-  id: pipeline.job.run
-  name: "Run Pipeline Job"
-  description: "Starts a pipeline job in a selected environment."
-  plugin: pipeline
-  application: pipeline-service
-  version: 1.0
-```
-
-```yaml
-tool:
-  id: pipeline.job.run.default
-  name: "Pipeline Job Runner"
-  description: "Invokes the Pipeline service to start a job."
-  plugin: pipeline
-  application: pipeline-service
-  version: 1.0
-  implements:
+  capabilities:
     - pipeline.job.run
-  invocation:
-    protocol: rest
-    operation: startJob
+    - pipeline.job.read
+    - pipeline.job.logs
+
+  flows:
+    - pipeline.job.run_and_summarize
+    - pipeline.job.diagnose_failure
+
+  tools:
+    - pipeline.job.run.rest
+    - pipeline.job.logs.rest
+
+  context:
+    - pipeline.workspace
+    - pipeline.environment
+
+  policies:
+    - pipeline.execution
+
+  approvals:
+    - production_execution
+
+  personas:
+    - pipeline_operator
 ```
 
-By listing the Plugin ID in each resource (`plugin: pipeline`), SIL knows which Plugin contributed which component. All identifiers (like `pipeline.job.run`) should use a consistent naming scheme.
+After registration, every contribution becomes available through its corresponding registry.
 
-## Behavioural Rules
+The Planning Engine may subsequently use these resources exactly as it would use native SIL resources.
 
-- Which Plugins are installed and available for a given session or environment?  
-- Which Plugin (by `id` and `version`) contributed a particular Flow, Capability, or Tool?  
-- How are naming conflicts resolved if two Plugins define the same resource identifier?  
-- When a new Plugin is added or an existing Plugin is updated, how does SIL ensure its contributions are correctly registered before any Request is planned?  
-- What happens if a Request refers to a resource from a Plugin that is not currently loaded or has been removed?  
+No special execution path exists for Plugin-provided functionality.
 
-- All Plugins must explicitly declare every extension they provide; implicit or hidden contributions are not allowed.  
-- The SIL core treats plugin-provided components as first-class citizens. Plugin identities should be recorded in all plan and audit logs for traceability.  
-- Plugins should not introduce non-determinism. Any plugin logic must execute through deterministic Tools or Agents given the same inputs.  
-- Removing or disabling a Plugin should invalidate its contributions. The platform should fail fast if an Execution Plan references a now-missing Plugin resource.  
-- Plugins are loaded between Requests. The system does not allow dynamic plugin loading during the execution of an already-planned Request.  
+---
 
-## Examples
+## Example 2 — Sudreg Plugin
 
-Imagine a user request to run a pipeline job: *“Start the CI pipeline for PR #123.”* The Processing Engine turns this into a Capability request (`pipeline.job.run`) with parameters. The Planning Engine might select a Flow (defined by the pipeline Plugin) to accomplish this task. The Execution Plan could look like:
+The Sudreg Plugin contributes business capabilities related to the Croatian Court Register.
 
 ```yaml
-request:
-  intent: pipeline.job.run
-  parameters:
-    pr_number: 123
-
-execution_plan:
-  flow:
-    id: pipeline.job.run_and_summarize
-    version: 1.0
-  plugins:
-    - pipeline
-  parameters:
-    environment: "prod"
-    pr: 123
-```
-
-This plan indicates that the Flow `pipeline.job.run_and_summarize` (defined by the `pipeline` Plugin) will be executed. During execution, the Flow Engine loads the flow definition and invokes each step’s Tool. Each step corresponds to a Capability (e.g. `pipeline.job.run`) implemented by a Tool contributed by the Plugin. Because the plugin’s contributions were registered in advance, the execution is fully deterministic and auditable, with the Plugin ID noted in logs.
-
-Another example is dynamic plugin discovery. Suppose a new Plugin `backups` is installed that adds a Capability `database.backup` with its Tool and Flow. After registration, this new capability can be used like any other. For instance, a request with intent `database.backup` will use the `backups` Plugin’s definitions without any core code changes.
-
-```yaml
-# plugins/backups/plugin.yaml
 plugin:
-  id: backups
-  name: "Database Backup Plugin"
-  version: 2.1
-  description: Enables scheduling and running backups of database instances.
-  contributions:
-    capabilities:
-      - database.backup
-    tools:
-      - database.backup.default
-    flows:
-      - database.backup.schedule
-      - database.backup.run
-    policies:
-      - name: "BackupAuthorization"
-        file: backup-policy.yaml
+  id: sudreg
+  version: 1.0
+
+  capabilities:
+    - sudreg.company.search
+    - sudreg.company.read
+    - sudreg.company.ownership
+
+  flows:
+    - sudreg.company.explain
+
+  tools:
+    - sudreg.company.rest
+
+  context:
+    - user_permissions
+
+  personas:
+    - legal_analyst
 ```
 
-With this manifest, SIL will load the `backups` Plugin’s capabilities, tools, and flows. If a request is made for `database.backup`, the Planning Engine can pick the `database.backup.run` flow, and the Plugin’s Tool will execute the backup process. No modifications to core SIL code are needed to support this new operation.
+Although completely unrelated to Pipeline, the Plugin integrates using exactly the same architectural model.
 
-## Architecture Decisions
+This demonstrates that SIL remains application-independent.
 
-### AD-3001
+---
 
-**Plugin extensibility is core to SIL.** SIL uses a Plugin model to allow extensions to provide new Flows, Capabilities, Tools, Agents, and policies. All plugin-provided definitions must be explicitly registered in the corresponding registries (Flow Registry, Capability Registry, etc.) at load time.
+## Example 3 — Cross-Application Request
 
-### AD-3002
+A user submits the following Request:
 
-**Plugin contributions must be declared, not implicit.** Plugins cannot add new resources through hidden code. Instead, every extension must appear in a Plugin manifest or definition file. This ensures the platform retains a complete, auditable picture of all available functionality.
+> Compare yesterday's failed Pipeline deployment with the ownership structure of the affected companies.
 
-### AD-3003
+This Request spans multiple applications.
 
-**Unique namespacing for plugin resources.** Each Plugin has a unique ID. All definitions contributed by a Plugin include the Plugin ID and use globally unique identifiers (for example, prefixed by plugin name). This prevents collisions between different plugins or between plugins and core components.
+The Planning Engine constructs an Execution Plan involving multiple Plugins.
 
-### AD-3004
+```mermaid
+flowchart LR
 
-**Plugin metadata and version control.** Plugins include version information. SIL must manage plugin compatibility, ensuring that plugins only load if their declared dependencies are satisfied (such as a minimum SIL version). Plugins with conflicting definitions or version requirements must be detected as errors before execution.
+Request
 
-### AD-3005
+--> Planning
 
-**No runtime code injection into flows.** Plugins may include helper code for Tools or Agents, but Flow definitions remain declarative. Any computation must occur in Tools or external Applications. Flow steps only reference named operations, preserving explainability of the orchestration.
+Planning
 
-### AD-3006
+--> PipelinePlugin
 
-**Fail-fast on plugin errors.** If a Plugin fails validation or a contributed resource cannot be registered, SIL should handle it immediately. The platform should not partially apply a plugin’s contributions; either all declared definitions from a plugin are accepted, or none are, to maintain consistency in the registries.
+Planning
 
-## Future Evolution and Related Documents
+--> SudregPlugin
 
-The Plugin Model defined in this document is intended to remain stable at the architectural level. Future work may explore refinements around plugin distribution and lifecycle. Areas for future evolution include:
+PipelinePlugin
 
-- Plugin dependency resolution and cross-plugin references.  
-- Official plugin repository or marketplace integration for distribution.  
-- Fine-grained permission scopes for plugin-provided operations.  
-- Enhanced sandboxing or security isolation for plugin code.  
-- Versioning strategies for rolling upgrades of plugin definitions.  
-- Plugin telemetry and usage analytics for governance.  
+--> FlowEngine
 
-The following SIL architecture documents should be read in conjunction with the Plugin Model:
+SudregPlugin
 
-- [00_Principles](00_Principles.md)  
-- [01_Vision](01_Vision.md)  
-- [02_Architecture](02_Architecture.md)  
-- [03_Core_Concepts](03_Core_Concepts.md)  
-- [10_Request_Engine](10_Request_Engine.md)  
-- [11_Context_Engine](11_Context_Engine.md)  
-- [12_Planning_Engine](12_Planning_Engine.md)  
-- [13_Policy_Engine](13_Policy_Engine.md)  
-- [14_Approval_Engine](14_Approval_Engine.md)  
-- [15_Flow_Engine](15_Flow_Engine.md)  
-- [16_Flow_DSL](16_Flow_DSL.md)  
-- [17_Capability_Registry](17_Capability_Registry.md)  
-- [18_Tool_Registry](18_Tool_Registry.md)  
-- [19_Agent_Registry](19_Agent_Registry.md)  
+--> FlowEngine
 
-> **A strong Plugin Model makes extension safe, explicit and explainable.** By requiring all plugin contributions to be declared and registered, SIL preserves deterministic orchestration and governance even as new integrations are added.
+FlowEngine
+
+--> Audit
+```
+
+Neither Plugin communicates with the other.
+
+The orchestration belongs exclusively to SIL.
+
+---
+
+## Example 4 — Plugin Upgrade
+
+Suppose version 2.0 of the Pipeline Plugin becomes available.
+
+The platform performs the following sequence.
+
+```text
+Install Plugin
+
+↓
+
+Validate Manifest
+
+↓
+
+Check Compatibility
+
+↓
+
+Resolve Dependencies
+
+↓
+
+Register Resources
+
+↓
+
+Enable Plugin
+
+↓
+
+Requests may now use v2
+```
+
+Existing Requests continue using the version against which they were planned.
+
+Future Requests use the newly enabled Plugin.
+
+This behaviour guarantees deterministic execution and reproducibility.
+
+---
+
+# Architecture Decisions
+
+## AD-3001
+
+**Applications integrate with SIL exclusively through Plugins.**
+
+Every application participating in the SIL ecosystem must expose its architectural assets through a Plugin.
+
+No direct integration with SIL Core is permitted.
+
+---
+
+## AD-3002
+
+**Plugins define architectural boundaries.**
+
+A Plugin represents the complete architectural integration of a business application.
+
+All Capabilities, Flows, Tools, Policies and Context Providers belonging to that application are owned by the Plugin.
+
+---
+
+## AD-3003
+
+**Plugins are declarative.**
+
+Plugins describe available architectural assets.
+
+They never determine runtime behaviour.
+
+Planning, execution and governance remain responsibilities of SIL Core.
+
+---
+
+## AD-3004
+
+**Plugin ownership is exclusive.**
+
+Every architectural resource belongs to exactly one Plugin.
+
+Ownership ambiguity is prohibited.
+
+---
+
+## AD-3005
+
+**Plugin loading is deterministic.**
+
+Plugin discovery, validation and registration occur before Request processing begins.
+
+Runtime Plugin mutation is not permitted.
+
+---
+
+## AD-3006
+
+**Plugin registration is atomic.**
+
+Either every declared contribution is successfully registered...
+
+or the Plugin is rejected.
+
+Partial registration is forbidden.
+
+---
+
+## AD-3007
+
+**Plugins are isolated.**
+
+Plugins never invoke one another directly.
+
+Cross-application collaboration always occurs through SIL orchestration.
+
+---
+
+## AD-3008
+
+**Namespaces are globally unique.**
+
+Every Capability, Tool, Flow and Policy contributed by a Plugin must have a globally unique identifier.
+
+Namespaces form part of the public architectural contract.
+
+---
+
+## AD-3009
+
+**Plugin compatibility is validated before registration.**
+
+Version conflicts, missing dependencies and incompatible manifests prevent Plugin activation.
+
+Compatibility problems never appear during Request execution.
+
+---
+
+## AD-3010
+
+**Plugins cannot bypass governance.**
+
+Every Plugin participates in the same Request lifecycle.
+
+No Plugin may bypass:
+
+- Request Engine
+- Planning Engine
+- Policy Engine
+- Approval Engine
+- Flow Engine
+- Audit Engine
+
+Core Plugins and third-party Plugins are governed identically.
+
+---
+
+## AD-3011
+
+**Plugins contribute capabilities, not intelligence.**
+
+Reasoning belongs to AI.
+
+Planning belongs to SIL.
+
+Business logic belongs to Applications.
+
+Plugins expose integration points between these layers.
+
+---
+
+## AD-3012
+
+**Plugin evolution must preserve architectural stability.**
+
+New Plugin versions should introduce additive functionality whenever possible.
+
+Breaking changes should be minimized and explicitly versioned.
+
+---
+
+# Future Evolution
+
+The Plugin architecture has been intentionally designed to support future expansion without changing the core execution model.
+
+Possible future enhancements include:
+
+## Enterprise Plugin Repository
+
+A centralized repository allowing organizations to publish, version and distribute approved Plugins.
+
+---
+
+## Plugin Marketplace
+
+An ecosystem where internal teams can discover reusable integrations.
+
+---
+
+## Digital Plugin Signatures
+
+Cryptographic signing of Plugin packages to ensure integrity and authenticity.
+
+---
+
+## Plugin Sandboxing
+
+Execution isolation for Plugin-provided adapters and helper libraries.
+
+---
+
+## Hot Deployment
+
+Controlled Plugin deployment without restarting SIL Core.
+
+This feature must preserve deterministic execution and therefore requires careful architectural validation.
+
+---
+
+## Plugin Telemetry
+
+Platform-level monitoring of:
+
+- Plugin usage
+- execution frequency
+- performance
+- failures
+- dependency graphs
+
+This information supports governance and operational planning.
+
+---
+
+## Plugin Certification
+
+Organizations may introduce certification workflows before Plugins become available in production.
+
+Certification may verify:
+
+- naming conventions;
+- documentation completeness;
+- compatibility;
+- security;
+- governance compliance.
+
+---
+
+## Cross-Organization Plugin Sharing
+
+Future SIL deployments may exchange Plugins between independent organizations while preserving local governance policies.
+
+---
+
+# Related Documents
+
+The Plugin Model should be read together with the following architecture documents.
+
+Foundation
+
+- 00_Principles
+- 01_Vision
+- 02_Architecture
+- 03_Core_Concepts
+
+Runtime
+
+- 10_Request_Engine
+- 11_Context_Engine
+- 12_Planning_Engine
+- 13_Policy_Engine
+- 14_Approval_Engine
+- 15_Flow_Engine
+
+Platform
+
+- 16_Flow_DSL
+- 17_Capability_Registry
+- 18_Tool_Registry
+- 19_Agent_Registry
+
+Implementation
+
+- 40_MVP
+- 41_Roadmap
+
+---
+
+# Closing Statement
+
+The Plugin Model is one of the foundational architectural mechanisms of the STATIS Intelligence Layer.
+
+It enables independent business applications to participate in a common AI-driven execution platform without sacrificing ownership, governance or architectural integrity.
+
+By treating Plugins as architectural boundaries rather than software extensions, SIL achieves a platform that is simultaneously extensible, deterministic and application-independent.
+
+Every new Plugin strengthens the platform without requiring changes to SIL Core.
+
+This property is fundamental to the long-term vision of SIL as the common intelligence layer for the entire STATIS ecosystem.
+
+They never modify it.
+
+---
+
+# Table of Contents
+
+1. Why Plugins Exist
+2. Plugin Philosophy
+3. Plugin Responsibilities and Boundaries
+4. Plugin Lifecycle
+5. Plugin Discovery
+6. Plugin Packaging
+7. Plugin Loading Pipeline
+8. Plugin Definition Model
+9. Plugin Isolation
+10. Plugin Dependencies
+11. Plugin Contracts
+12. Behavioural Rules
+13. Examples
+14. Architecture Decisions
+15. Future Evolution
+16. Related Documents
+
+---
+
+# Why Plugins Exist
+
+One of the fundamental goals of SIL is to become the common intelligence layer for every STATIS application.
+
+This immediately raises an architectural question:
+
+> How can new applications become part of SIL without requiring modifications to SIL Core?
+
+The answer is the Plugin Model.
+
+Applications evolve continuously.
+
+New applications appear.
+
+Existing applications change.
+
+Technologies become obsolete.
+
+Communication protocols evolve.
+
+None of these events should require changes inside SIL Core.
+
+Instead, SIL delegates every application-specific concern to Plugins.
+
+The Plugin becomes the architectural contract between the platform and an application.
+
+Instead of embedding Pipeline knowledge inside SIL...
+
+SIL loads the Pipeline Plugin.
+
+Instead of embedding Sudreg knowledge...
+
+SIL loads the Sudreg Plugin.
+
+Instead of embedding Data Catalogue knowledge...
+
+SIL loads the corresponding Plugin.
+
+This approach keeps the platform stable while allowing the application landscape to evolve.
+
+---
+
+# Plugin Philosophy
+
+Plugins should not be viewed as software extensions.
+
+They should be viewed as **bounded architectural contexts**.
+
+Each Plugin owns a complete business integration.
+
+For example, the Pipeline Plugin owns:
+
+- Pipeline Capabilities
+- Pipeline Flows
+- Pipeline Tools
+- Pipeline Policies
+- Pipeline Context Providers
+- Pipeline Approval Rules
+- Pipeline Personas
+
+Likewise, the Sudreg Plugin owns all architectural assets related to Sudreg.
+
+This ownership model prevents architectural leakage between applications.
+
+Every business concept has exactly one owner.
+
+The Plugin therefore becomes the natural extension unit of the platform.
+
+---
+
+# Plugin Responsibilities and Boundaries
+
+A Plugin has four primary responsibilities.
+
+## 1. Describe application capabilities
+
+The Plugin declares which business operations are available.
+
+Examples include:
+
+- Run Job
+- Explain Job
+- Search Company
+- Read Company
+- Read Dataset Metadata
+
+Capabilities always describe business functionality.
+
+Never implementation.
+
+---
+
+## 2. Provide implementation adapters
+
+Capabilities are implemented through Tools.
+
+A Plugin supplies the Tool implementations required to execute its Capabilities.
+
+The Tool may internally communicate using:
+
+- REST
+- MCP
+- SDK
+- database services
+- message queues
+- local libraries
+
+These implementation choices remain invisible to SIL.
+
+---
+
+## 3. Contribute orchestration assets
+
+A Plugin may register:
+
+- Flows
+- Context Providers
+- Policies
+- Approval Rules
+- Agents
+- Personas
+
+These assets become available to the platform through their corresponding registries.
+
+---
+
+## 4. Preserve application ownership
+
+Business rules remain inside the application.
+
+The Plugin exposes them.
+
+SIL orchestrates them.
+
+Neither SIL nor another Plugin should duplicate or reinterpret application business logic.
+
+---
+
+# What a Plugin Never Does
+
+Understanding what Plugins do **not** do is just as important.
+
+Plugins never:
+
+- execute Requests directly;
+- perform planning;
+- evaluate Policies;
+- bypass Approval;
+- orchestrate other Plugins;
+- invoke applications outside registered Tools;
+- expose hidden capabilities;
+- modify SIL Core.
+
+Architecturally, Plugins contribute knowledge.
+
+The SIL runtime remains responsible for execution.
+
+---
+
+# Plugin Lifecycle
+
+Plugins follow a deterministic lifecycle.
+
+```mermaid
+flowchart LR
+
+Installed
+
+--> Validated
+
+--> Registered
+
+--> Enabled
+
+--> Available
+
+--> Deprecated
+
+--> Disabled
+
+--> Removed
+```
+
+Each lifecycle stage has a specific architectural meaning.
+
+## Installed
+
+The Plugin package becomes available to SIL.
+
+At this stage it has not yet been trusted.
+
+No contribution is visible.
+
+---
+
+## Validated
+
+SIL validates:
+
+- manifest
+- identifiers
+- versions
+- dependencies
+- contribution definitions
+
+Only fully valid Plugins continue.
+
+---
+
+## Registered
+
+Every declared contribution is inserted into the corresponding registry.
+
+Examples:
+
+- Capability Registry
+- Tool Registry
+- Flow Registry
+- Agent Registry
+
+Registration is atomic.
+
+Either the Plugin becomes fully registered...
+
+or nothing is registered.
+
+Partial registration is forbidden.
+
+---
+
+## Enabled
+
+The Plugin becomes eligible for Request planning.
+
+Planning Engine may now reference its Flows and Capabilities.
+
+---
+
+## Available
+
+The Plugin participates in normal Request processing.
+
+Its contributions are treated exactly like native SIL resources.
+
+---
+
+## Deprecated
+
+The Plugin remains available but signals planned removal.
+
+Future Requests should gradually migrate elsewhere.
+
+---
+
+## Disabled
+
+The Plugin remains installed but contributes no executable resources.
+
+Existing Requests continue only if already planned.
+
+New Requests cannot depend on disabled Plugins.
+
+---
+
+## Removed
+
+All contributed resources disappear from the registries.
+
+Execution Plans referencing removed resources become invalid.
+
+This fail-fast behaviour preserves deterministic execution.
