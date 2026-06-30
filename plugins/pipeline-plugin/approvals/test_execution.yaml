@@ -1,0 +1,12 @@
+approval:
+  id: pipeline.execution.test
+  name: Pipeline TEST Execution Approval
+  plugin: pipeline
+  description: Approval required before executing selected Pipeline jobs in TEST.
+  approvers:
+    roles:
+      - Pipeline Developer
+      - Pipeline Operator
+  timeout_minutes: 30
+  audit:
+    required: true

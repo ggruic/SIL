@@ -1,0 +1,26 @@
+capability:
+  id: pipeline.job.find
+  name: Find Pipeline Job
+  description: Resolves a user-provided job reference to a Pipeline job candidate.
+  plugin: pipeline
+  application: pipeline
+  category: Job Operations
+  inputs:
+    query:
+      type: string
+      required: true
+    workspace:
+      type: string
+      required: false
+    environment:
+      type: string
+      required: false
+  outputs:
+    job_id:
+      type: string
+    job_name:
+      type: string
+    workspace:
+      type: string
+    environment:
+      type: string

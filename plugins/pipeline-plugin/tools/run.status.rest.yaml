@@ -1,0 +1,12 @@
+tool:
+  id: pipeline.run.status.rest
+  name: Pipeline Run Status REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.run.status
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/runs/{run_id}/status
+  timeout_seconds: 10

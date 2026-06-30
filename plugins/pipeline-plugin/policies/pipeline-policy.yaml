@@ -1,0 +1,36 @@
+policy:
+  id: pipeline.default
+  name: Default Pipeline Policy
+  plugin: pipeline
+  rules:
+    - id: pipeline.read.allow
+      applies_to:
+        - pipeline.job.find
+        - pipeline.job.read
+        - pipeline.job.files.read
+        - pipeline.run.read
+        - pipeline.run.logs.read
+        - pipeline.run.error.read
+        - pipeline.run.find_latest
+        - pipeline.run.compare
+      decision: allow
+
+    - id: pipeline.dev.run.allow
+      applies_to:
+        - pipeline.job.run
+      when: "{{request.parameters.environment == 'DEV'}}"
+      decision: allow
+
+    - id: pipeline.test.run.approval
+      applies_to:
+        - pipeline.job.run
+      when: "{{request.parameters.environment == 'TEST'}}"
+      decision: approval_required
+      approval: pipeline.execution.test
+
+    - id: pipeline.prod.run.approval
+      applies_to:
+        - pipeline.job.run
+      when: "{{request.parameters.environment == 'PROD'}}"
+      decision: approval_required
+      approval: pipeline.execution.production

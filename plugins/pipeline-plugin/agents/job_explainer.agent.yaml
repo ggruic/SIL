@@ -1,0 +1,10 @@
+agent:
+  id: pipeline.job_explainer
+  plugin: pipeline
+  persona: pipeline.architect
+  description: Explains Pipeline job purpose, configuration, inputs, outputs and risks.
+  inputs:
+    - job
+    - files
+  outputs:
+    type: markdown

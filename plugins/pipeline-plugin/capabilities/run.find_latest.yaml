@@ -1,0 +1,23 @@
+capability:
+  id: pipeline.run.find_latest
+  name: Find Latest Pipeline Run
+  description: Finds the latest run for a selected Pipeline job using a selector.
+  plugin: pipeline
+  application: pipeline
+  category: Run Operations
+  inputs:
+    job_id:
+      type: string
+      required: true
+    selector:
+      type: string
+      required: true
+      examples:
+        - latest
+        - latest_failed
+        - latest_successful
+  outputs:
+    run_id:
+      type: string
+    status:
+      type: string

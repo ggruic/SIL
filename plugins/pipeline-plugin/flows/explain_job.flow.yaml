@@ -1,0 +1,78 @@
+flow:
+  id: pipeline.job.explain
+  name: Explain Pipeline Job
+  description: Explains what a Pipeline job does using metadata and selected non-secret files.
+  version: 0.1.0
+  plugin: pipeline
+
+matches:
+  intents:
+    - explain_job
+  entities:
+    - job
+  applications:
+    - pipeline
+
+requires:
+  capabilities:
+    - pipeline.job.find
+    - pipeline.job.read
+    - pipeline.job.files.read
+
+parameters:
+  job:
+    type: job_ref
+    required: true
+  workspace:
+    type: workspace_ref
+    required: false
+  environment:
+    type: enum
+    values: [DEV, TEST, PROD]
+    default: DEV
+
+steps:
+  - id: find_job
+    type: capability
+    capability: pipeline.job.find
+    input:
+      query: "{{request.entities.job}}"
+      workspace: "{{context.workspace}}"
+      environment: "{{request.parameters.environment}}"
+
+  - id: read_job
+    type: capability
+    capability: pipeline.job.read
+    input:
+      job_id: "{{steps.find_job.output.job_id}}"
+
+  - id: read_files
+    type: capability
+    capability: pipeline.job.files.read
+    input:
+      job_id: "{{steps.find_job.output.job_id}}"
+      include:
+        - conf
+        - scripts
+        - schedule
+
+  - id: explain
+    type: agent
+    agent: pipeline.job_explainer
+    input:
+      prompt: |
+        Explain this Pipeline job.
+        Focus on purpose, inputs, outputs, schedule, risks and operational notes.
+
+        Job:
+        {{steps.read_job.output}}
+
+        Files:
+        {{steps.read_files.output}}
+
+output:
+  type: markdown
+  source: "{{steps.explain.output}}"
+
+audit:
+  enabled: true

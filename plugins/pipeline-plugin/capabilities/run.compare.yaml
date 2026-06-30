@@ -1,0 +1,17 @@
+capability:
+  id: pipeline.run.compare
+  name: Compare Pipeline Runs
+  description: Compares two Pipeline runs and returns deterministic differences.
+  plugin: pipeline
+  application: pipeline
+  category: Run Operations
+  inputs:
+    left_run_id:
+      type: string
+      required: true
+    right_run_id:
+      type: string
+      required: true
+  outputs:
+    comparison:
+      type: object

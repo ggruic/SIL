@@ -1,0 +1,10 @@
+context_provider:
+  id: pipeline.user_permissions
+  name: Pipeline User Permissions Context
+  plugin: pipeline
+  description: Provides Pipeline-specific user permissions used by Policy evaluation.
+  provides:
+    - context.permissions.pipeline
+  source:
+    type: application_api
+    capability: pipeline.user.permissions

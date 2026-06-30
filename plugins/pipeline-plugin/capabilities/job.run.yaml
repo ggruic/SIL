@@ -1,0 +1,22 @@
+capability:
+  id: pipeline.job.run
+  name: Run Pipeline Job
+  description: Starts a Pipeline job in the selected execution environment.
+  plugin: pipeline
+  application: pipeline
+  category: Job Operations
+  inputs:
+    job_id:
+      type: string
+      required: true
+    environment:
+      type: string
+      required: true
+    parameters:
+      type: object
+      required: false
+  outputs:
+    run_id:
+      type: string
+    status:
+      type: string

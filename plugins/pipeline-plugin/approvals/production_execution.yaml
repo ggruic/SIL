@@ -1,0 +1,12 @@
+approval:
+  id: pipeline.execution.production
+  name: Pipeline PROD Execution Approval
+  plugin: pipeline
+  description: Approval required before executing Pipeline jobs in PROD.
+  approvers:
+    roles:
+      - Pipeline Admin
+      - Release Manager
+  timeout_minutes: 30
+  audit:
+    required: true

@@ -1,0 +1,10 @@
+context_provider:
+  id: pipeline.workspace
+  name: Pipeline Workspace Context
+  plugin: pipeline
+  description: Resolves the active Pipeline workspace for a Request.
+  provides:
+    - context.workspace
+  source:
+    type: request_or_session
+    fallback: user_default_workspace

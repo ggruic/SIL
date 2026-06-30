@@ -1,0 +1,14 @@
+tool:
+  id: pipeline.run.error.read.rest
+  name: Pipeline Run Error Reader REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.run.error.read
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/runs/{run_id}/error
+  security:
+    redaction: enabled
+    secrets: redact

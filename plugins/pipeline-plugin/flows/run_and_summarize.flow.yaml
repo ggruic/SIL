@@ -1,0 +1,84 @@
+flow:
+  id: pipeline.job.run_and_summarize
+  name: Run Pipeline Job and Summarize
+  description: Runs a Pipeline job, waits for completion, reads logs and summarizes the result.
+  version: 0.1.0
+  plugin: pipeline
+
+matches:
+  intents:
+    - run_job
+  entities:
+    - job
+  applications:
+    - pipeline
+
+requires:
+  capabilities:
+    - pipeline.job.find
+    - pipeline.job.run
+    - pipeline.run.status
+    - pipeline.run.logs.read
+
+parameters:
+  job:
+    type: job_ref
+    required: true
+  environment:
+    type: enum
+    values: [DEV, TEST, PROD]
+    default: DEV
+  parameters:
+    type: object
+    required: false
+
+steps:
+  - id: find_job
+    type: capability
+    capability: pipeline.job.find
+    input:
+      query: "{{request.entities.job}}"
+      workspace: "{{context.workspace}}"
+      environment: "{{request.parameters.environment}}"
+
+  - id: start_run
+    type: capability
+    capability: pipeline.job.run
+    input:
+      job_id: "{{steps.find_job.output.job_id}}"
+      environment: "{{request.parameters.environment}}"
+      parameters: "{{request.parameters.parameters}}"
+
+  - id: wait_run
+    type: wait
+    capability: pipeline.run.status
+    input:
+      run_id: "{{steps.start_run.output.run_id}}"
+    until: "{{result.status in ['SUCCESS', 'FAILED', 'CANCELLED']}}"
+    timeout_seconds: 3600
+
+  - id: read_logs
+    type: capability
+    capability: pipeline.run.logs.read
+    input:
+      run_id: "{{steps.start_run.output.run_id}}"
+
+  - id: summarize
+    type: agent
+    agent: pipeline.run_reporter
+    input:
+      prompt: |
+        Summarize the result of this Pipeline run.
+
+        Status:
+        {{steps.wait_run.output}}
+
+        Logs:
+        {{steps.read_logs.output}}
+
+output:
+  type: markdown
+  source: "{{steps.summarize.output}}"
+
+audit:
+  enabled: true

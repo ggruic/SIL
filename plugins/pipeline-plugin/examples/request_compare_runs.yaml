@@ -1,0 +1,6 @@
+request:
+  original_input:
+    text: "Compare the last two FA validation runs"
+  intent: compare_runs
+  entities:
+    job: "FA validation"

@@ -1,0 +1,9 @@
+context_provider:
+  id: pipeline.environment
+  name: Pipeline Environment Context
+  plugin: pipeline
+  description: Resolves DEV, TEST or PROD environment for Pipeline execution.
+  provides:
+    - context.environment
+  defaults:
+    environment: DEV

@@ -1,0 +1,10 @@
+agent:
+  id: pipeline.run_reporter
+  plugin: pipeline
+  persona: pipeline.operator
+  description: Summarizes Pipeline run status and operational result.
+  inputs:
+    - status
+    - logs
+  outputs:
+    type: markdown

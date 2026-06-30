@@ -1,0 +1,9 @@
+agent:
+  id: pipeline.run_comparator
+  plugin: pipeline
+  persona: pipeline.operator
+  description: Explains differences between two Pipeline runs.
+  inputs:
+    - comparison
+  outputs:
+    type: markdown

@@ -1,0 +1,14 @@
+capability:
+  id: pipeline.job.read
+  name: Read Pipeline Job
+  description: Reads metadata for a Pipeline job.
+  plugin: pipeline
+  application: pipeline
+  category: Job Operations
+  inputs:
+    job_id:
+      type: string
+      required: true
+  outputs:
+    job:
+      type: object

@@ -1,0 +1,79 @@
+flow:
+  id: pipeline.run.compare_last_two
+  name: Compare Last Two Pipeline Runs
+  description: Compares the last two relevant Pipeline runs and explains differences.
+  version: 0.1.0
+  plugin: pipeline
+
+matches:
+  intents:
+    - compare_runs
+  entities:
+    - job
+  applications:
+    - pipeline
+
+requires:
+  capabilities:
+    - pipeline.job.find
+    - pipeline.run.find_latest
+    - pipeline.run.compare
+
+parameters:
+  job:
+    type: job_ref
+    required: true
+  selector_left:
+    type: string
+    default: latest
+  selector_right:
+    type: string
+    default: previous
+
+steps:
+  - id: find_job
+    type: capability
+    capability: pipeline.job.find
+    input:
+      query: "{{request.entities.job}}"
+      workspace: "{{context.workspace}}"
+      environment: "{{request.parameters.environment}}"
+
+  - id: find_latest_run
+    type: capability
+    capability: pipeline.run.find_latest
+    input:
+      job_id: "{{steps.find_job.output.job_id}}"
+      selector: latest
+
+  - id: find_previous_run
+    type: capability
+    capability: pipeline.run.find_latest
+    input:
+      job_id: "{{steps.find_job.output.job_id}}"
+      selector: previous
+
+  - id: compare
+    type: capability
+    capability: pipeline.run.compare
+    input:
+      left_run_id: "{{steps.find_latest_run.output.run_id}}"
+      right_run_id: "{{steps.find_previous_run.output.run_id}}"
+
+  - id: explain
+    type: agent
+    agent: pipeline.run_comparator
+    input:
+      prompt: |
+        Explain the differences between these Pipeline runs.
+        Focus on status, duration, outputs, warnings, errors and operational impact.
+
+        Comparison:
+        {{steps.compare.output}}
+
+output:
+  type: markdown
+  source: "{{steps.explain.output}}"
+
+audit:
+  enabled: true

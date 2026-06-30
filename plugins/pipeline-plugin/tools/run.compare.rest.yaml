@@ -1,0 +1,14 @@
+tool:
+  id: pipeline.run.compare.rest
+  name: Pipeline Run Comparator REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.run.compare
+  invocation:
+    protocol: rest
+    method: POST
+    path: /api/runs/compare
+    body:
+      left_run_id: "{{input.left_run_id}}"
+      right_run_id: "{{input.right_run_id}}"

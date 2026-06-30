@@ -1,0 +1,16 @@
+capability:
+  id: pipeline.run.error.read
+  name: Read Pipeline Run Error
+  description: Reads error artifacts produced by a failed Pipeline run.
+  plugin: pipeline
+  application: pipeline
+  category: Run Operations
+  inputs:
+    run_id:
+      type: string
+      required: true
+  outputs:
+    error:
+      type: object
+  constraints:
+    secrets: redact

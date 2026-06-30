@@ -1,0 +1,14 @@
+capability:
+  id: pipeline.run.read
+  name: Read Pipeline Run
+  description: Reads metadata and summary information for a Pipeline run.
+  plugin: pipeline
+  application: pipeline
+  category: Run Operations
+  inputs:
+    run_id:
+      type: string
+      required: true
+  outputs:
+    run:
+      type: object

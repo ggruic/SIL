@@ -1,0 +1,15 @@
+tool:
+  id: pipeline.job.files.read.rest
+  name: Pipeline Job Files Reader REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.job.files.read
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/jobs/{job_id}/files
+  security:
+    credentials: service_account
+    secrets: deny
+    redaction: enabled

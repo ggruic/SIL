@@ -1,0 +1,89 @@
+flow:
+  id: pipeline.run.diagnose_failed
+  name: Diagnose Failed Pipeline Run
+  description: Diagnoses the latest failed run for a Pipeline job.
+  version: 0.1.0
+  plugin: pipeline
+
+matches:
+  intents:
+    - diagnose_failed_run
+  entities:
+    - job
+  applications:
+    - pipeline
+
+requires:
+  capabilities:
+    - pipeline.job.find
+    - pipeline.run.find_latest
+    - pipeline.run.read
+    - pipeline.run.logs.read
+    - pipeline.run.error.read
+
+parameters:
+  job:
+    type: job_ref
+    required: true
+  run:
+    type: run_ref
+    default: latest_failed
+
+steps:
+  - id: find_job
+    type: capability
+    capability: pipeline.job.find
+    input:
+      query: "{{request.entities.job}}"
+      workspace: "{{context.workspace}}"
+      environment: "{{request.parameters.environment}}"
+
+  - id: find_failed_run
+    type: capability
+    capability: pipeline.run.find_latest
+    input:
+      job_id: "{{steps.find_job.output.job_id}}"
+      selector: latest_failed
+
+  - id: read_run
+    type: capability
+    capability: pipeline.run.read
+    input:
+      run_id: "{{steps.find_failed_run.output.run_id}}"
+
+  - id: read_logs
+    type: capability
+    capability: pipeline.run.logs.read
+    input:
+      run_id: "{{steps.find_failed_run.output.run_id}}"
+      level: error
+
+  - id: read_error
+    type: capability
+    capability: pipeline.run.error.read
+    input:
+      run_id: "{{steps.find_failed_run.output.run_id}}"
+
+  - id: diagnose
+    type: agent
+    agent: pipeline.failure_diagnostician
+    input:
+      prompt: |
+        Diagnose this failed Pipeline run.
+        Return likely cause, supporting evidence, confidence, recommended next step and whether developer intervention is required.
+
+        Run:
+        {{steps.read_run.output}}
+
+        Logs:
+        {{steps.read_logs.output}}
+
+        Error:
+        {{steps.read_error.output}}
+
+output:
+  type: markdown
+  source: "{{steps.diagnose.output}}"
+
+audit:
+  enabled: true

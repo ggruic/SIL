@@ -1,0 +1,17 @@
+tool:
+  id: pipeline.job.find.rest
+  name: Pipeline Job Finder REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.job.find
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/workspaces/{workspace}/jobs/search
+    query:
+      q: "{{input.query}}"
+      environment: "{{input.environment}}"
+  security:
+    credentials: service_account
+    secrets: reference_only

@@ -1,0 +1,14 @@
+tool:
+  id: pipeline.job.read.rest
+  name: Pipeline Job Reader REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.job.read
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/jobs/{job_id}
+  security:
+    credentials: service_account
+    secrets: reference_only

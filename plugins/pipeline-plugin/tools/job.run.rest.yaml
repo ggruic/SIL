@@ -1,0 +1,18 @@
+tool:
+  id: pipeline.job.run.rest
+  name: Pipeline Job Runner REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.job.run
+  invocation:
+    protocol: rest
+    method: POST
+    path: /api/jobs/{job_id}/runs
+    body:
+      environment: "{{input.environment}}"
+      parameters: "{{input.parameters}}"
+  timeout_seconds: 60
+  security:
+    credentials: delegated_user
+    secrets: reference_only

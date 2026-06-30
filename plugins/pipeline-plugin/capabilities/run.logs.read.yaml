@@ -1,0 +1,19 @@
+capability:
+  id: pipeline.run.logs.read
+  name: Read Pipeline Run Logs
+  description: Reads logs produced by a Pipeline run.
+  plugin: pipeline
+  application: pipeline
+  category: Run Operations
+  inputs:
+    run_id:
+      type: string
+      required: true
+    level:
+      type: string
+      required: false
+  outputs:
+    logs:
+      type: array
+  constraints:
+    secrets: redact

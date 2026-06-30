@@ -1,0 +1,18 @@
+capability:
+  id: pipeline.run.status
+  name: Read Pipeline Run Status
+  description: Reads the current status of a Pipeline run.
+  plugin: pipeline
+  application: pipeline
+  category: Run Operations
+  inputs:
+    run_id:
+      type: string
+      required: true
+  outputs:
+    status:
+      type: string
+    started_at:
+      type: string
+    finished_at:
+      type: string

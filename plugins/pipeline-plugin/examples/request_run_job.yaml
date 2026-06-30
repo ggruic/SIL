@@ -1,0 +1,8 @@
+request:
+  original_input:
+    text: "Run FA validation in TEST and summarize the result"
+  intent: run_job
+  entities:
+    job: "FA validation"
+  parameters:
+    environment: TEST

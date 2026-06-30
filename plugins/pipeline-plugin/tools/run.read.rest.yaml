@@ -1,0 +1,11 @@
+tool:
+  id: pipeline.run.read.rest
+  name: Pipeline Run Reader REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.run.read
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/runs/{run_id}

@@ -1,0 +1,13 @@
+tool:
+  id: pipeline.run.find_latest.rest
+  name: Pipeline Latest Run Finder REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.run.find_latest
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/jobs/{job_id}/runs/latest
+    query:
+      selector: "{{input.selector}}"

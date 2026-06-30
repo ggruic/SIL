@@ -1,0 +1,16 @@
+tool:
+  id: pipeline.run.logs.read.rest
+  name: Pipeline Run Logs Reader REST Tool
+  plugin: pipeline
+  application: pipeline
+  implements:
+    - pipeline.run.logs.read
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/runs/{run_id}/logs
+    query:
+      level: "{{input.level}}"
+  security:
+    redaction: enabled
+    secrets: redact

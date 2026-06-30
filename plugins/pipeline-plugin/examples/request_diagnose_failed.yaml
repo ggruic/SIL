@@ -1,0 +1,8 @@
+request:
+  original_input:
+    text: "Diagnose the latest failed FA validation run"
+  intent: diagnose_failed_run
+  entities:
+    job: "FA validation"
+  parameters:
+    run: latest_failed

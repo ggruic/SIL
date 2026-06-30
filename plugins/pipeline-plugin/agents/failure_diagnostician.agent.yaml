@@ -1,0 +1,11 @@
+agent:
+  id: pipeline.failure_diagnostician
+  plugin: pipeline
+  persona: pipeline.troubleshooter
+  description: Diagnoses failed Pipeline runs.
+  inputs:
+    - run
+    - logs
+    - error
+  outputs:
+    type: markdown

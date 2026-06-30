@@ -1,0 +1,20 @@
+capability:
+  id: pipeline.job.files.read
+  name: Read Pipeline Job Files
+  description: Reads selected non-secret job files for explanation and diagnostics.
+  plugin: pipeline
+  application: pipeline
+  category: Job Operations
+  inputs:
+    job_id:
+      type: string
+      required: true
+    include:
+      type: array
+      required: false
+  outputs:
+    files:
+      type: array
+  constraints:
+    secrets: deny
+    max_file_size_mb: 1

@@ -1,0 +1,6 @@
+request:
+  original_input:
+    text: "Explain what FA validation job does"
+  intent: explain_job
+  entities:
+    job: "FA validation"
