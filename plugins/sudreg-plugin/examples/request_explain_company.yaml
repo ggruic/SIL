@@ -1,0 +1,8 @@
+request:
+  original_input:
+    text: "Explain company Ericsson Nikola Tesla"
+  intent: explain_company
+  entities:
+    company: "Ericsson Nikola Tesla"
+  parameters:
+    include_history: true

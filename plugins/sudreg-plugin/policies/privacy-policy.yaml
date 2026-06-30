@@ -1,0 +1,12 @@
+policy:
+  id: sudreg.privacy
+  name: Sudreg Privacy and Data Minimization Policy
+  plugin: sudreg
+  rules:
+    - id: sudreg.company.explain.minimize
+      applies_to:
+        - sudreg.company.explain
+      decision: allow
+      constraints:
+        include_only_business_relevant_fields: true
+        redact_sensitive_personal_data: true

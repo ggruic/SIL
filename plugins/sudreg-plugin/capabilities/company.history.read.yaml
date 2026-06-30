@@ -1,0 +1,14 @@
+capability:
+  id: sudreg.company.history.read
+  name: Read Company History
+  description: Reads selected historical registry events for a company when available.
+  plugin: sudreg
+  application: sudreg
+  category: Registry History Operations
+  inputs:
+    company_id:
+      type: string
+      required: true
+  outputs:
+    history:
+      type: array

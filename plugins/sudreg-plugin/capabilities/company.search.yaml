@@ -1,0 +1,28 @@
+capability:
+  id: sudreg.company.search
+  name: Search Company
+  description: Searches Sudreg for a company using a user-provided business reference.
+  plugin: sudreg
+  application: sudreg
+  category: Company Operations
+  inputs:
+    query:
+      type: string
+      required: true
+    oib:
+      type: string
+      required: false
+    registry_number:
+      type: string
+      required: false
+  outputs:
+    company_id:
+      type: string
+    company_name:
+      type: string
+    oib:
+      type: string
+    candidates:
+      type: array
+  ambiguity:
+    multiple_candidates: supported

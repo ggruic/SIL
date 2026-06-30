@@ -1,0 +1,18 @@
+tool:
+  id: sudreg.company.search.rest
+  name: Sudreg Company Search REST Tool
+  plugin: sudreg
+  application: sudreg
+  implements:
+    - sudreg.company.search
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/companies/search
+    query:
+      q: "{{input.query}}"
+      oib: "{{input.oib}}"
+      registry_number: "{{input.registry_number}}"
+  security:
+    credentials: delegated_user
+    secrets: reference_only

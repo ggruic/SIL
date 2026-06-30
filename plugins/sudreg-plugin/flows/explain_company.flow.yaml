@@ -1,0 +1,93 @@
+flow:
+  id: sudreg.company.explain
+  name: Explain Company
+  description: Finds a company in Sudreg and explains its registry information in business language.
+  version: 0.1.0
+  plugin: sudreg
+
+matches:
+  intents:
+    - explain_company
+  entities:
+    - company
+  applications:
+    - sudreg
+
+requires:
+  capabilities:
+    - sudreg.company.search
+    - sudreg.company.read
+    - sudreg.company.owners.read
+    - sudreg.company.history.read
+
+parameters:
+  company:
+    type: company_ref
+    required: true
+  oib:
+    type: string
+    required: false
+  registry_number:
+    type: string
+    required: false
+  include_history:
+    type: boolean
+    default: true
+
+steps:
+  - id: search_company
+    type: capability
+    capability: sudreg.company.search
+    input:
+      query: "{{request.entities.company}}"
+      oib: "{{request.parameters.oib}}"
+      registry_number: "{{request.parameters.registry_number}}"
+
+  - id: read_company
+    type: capability
+    capability: sudreg.company.read
+    input:
+      company_id: "{{steps.search_company.output.company_id}}"
+
+  - id: read_owners
+    type: capability
+    capability: sudreg.company.owners.read
+    input:
+      company_id: "{{steps.search_company.output.company_id}}"
+
+  - id: read_history
+    type: capability
+    capability: sudreg.company.history.read
+    input:
+      company_id: "{{steps.search_company.output.company_id}}"
+
+  - id: explain
+    type: agent
+    agent: sudreg.company_explainer
+    input:
+      prompt: |
+        Explain this company using clear business language.
+
+        Focus on:
+        - company identity
+        - legal status
+        - registered activities
+        - ownership and membership structure
+        - relevant registry history
+        - data limitations or ambiguity
+
+        Company:
+        {{steps.read_company.output}}
+
+        Owners:
+        {{steps.read_owners.output}}
+
+        History:
+        {{steps.read_history.output}}
+
+output:
+  type: markdown
+  source: "{{steps.explain.output}}"
+
+audit:
+  enabled: true

@@ -1,0 +1,14 @@
+agent:
+  id: sudreg.company_explainer
+  plugin: sudreg
+  persona: sudreg.business_analyst
+  description: Explains Sudreg company data in business language.
+  inputs:
+    - company
+    - owners
+    - history
+  outputs:
+    type: markdown
+  constraints:
+    legal_advice: deny
+    cite_data_limitations: true

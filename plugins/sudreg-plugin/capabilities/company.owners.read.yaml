@@ -1,0 +1,14 @@
+capability:
+  id: sudreg.company.owners.read
+  name: Read Company Owners
+  description: Reads ownership and membership information for a selected company.
+  plugin: sudreg
+  application: sudreg
+  category: Ownership Operations
+  inputs:
+    company_id:
+      type: string
+      required: true
+  outputs:
+    owners:
+      type: array

@@ -1,0 +1,22 @@
+policy:
+  id: sudreg.default
+  name: Default Sudreg Policy
+  plugin: sudreg
+  rules:
+    - id: sudreg.company.read.allow
+      applies_to:
+        - sudreg.company.search
+        - sudreg.company.read
+        - sudreg.company.owners.read
+        - sudreg.company.history.read
+      decision: allow
+      when: "{{context.permissions.sudreg.can_read_companies == true}}"
+
+    - id: sudreg.company.read.deny_without_permission
+      applies_to:
+        - sudreg.company.search
+        - sudreg.company.read
+        - sudreg.company.owners.read
+        - sudreg.company.history.read
+      decision: deny
+      when: "{{context.permissions.sudreg.can_read_companies != true}}"

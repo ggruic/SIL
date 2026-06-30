@@ -1,0 +1,11 @@
+context_provider:
+  id: sudreg.company_resolution_preferences
+  name: Company Resolution Preferences
+  plugin: sudreg
+  description: Provides default company resolution preferences such as exact OIB match before name match.
+  provides:
+    - context.sudreg.company_resolution
+  defaults:
+    prefer_exact_oib: true
+    allow_multiple_candidates: false
+    require_clarification_on_ambiguity: true

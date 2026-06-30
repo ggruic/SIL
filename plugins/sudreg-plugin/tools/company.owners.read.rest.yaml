@@ -1,0 +1,14 @@
+tool:
+  id: sudreg.company.owners.read.rest
+  name: Sudreg Company Owners Reader REST Tool
+  plugin: sudreg
+  application: sudreg
+  implements:
+    - sudreg.company.owners.read
+  invocation:
+    protocol: rest
+    method: GET
+    path: /api/companies/{company_id}/owners
+  security:
+    credentials: delegated_user
+    secrets: reference_only

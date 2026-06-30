@@ -1,0 +1,14 @@
+capability:
+  id: sudreg.company.read
+  name: Read Company
+  description: Reads basic registry details for a selected company.
+  plugin: sudreg
+  application: sudreg
+  category: Company Operations
+  inputs:
+    company_id:
+      type: string
+      required: true
+  outputs:
+    company:
+      type: object

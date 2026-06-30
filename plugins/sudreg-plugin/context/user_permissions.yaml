@@ -1,0 +1,10 @@
+context_provider:
+  id: sudreg.user_permissions
+  name: Sudreg User Permissions Context
+  plugin: sudreg
+  description: Provides Sudreg-specific user permissions used by Policy evaluation.
+  provides:
+    - context.permissions.sudreg
+  source:
+    type: application_api
+    capability: sudreg.user.permissions

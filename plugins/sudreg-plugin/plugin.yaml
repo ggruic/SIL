@@ -1,0 +1,44 @@
+plugin:
+  id: sudreg
+  name: Sudreg Plugin
+  version: 0.1.0
+  status: draft
+  application: sudreg
+  owner: STATIS Team
+  description: >
+    Integrates Sudreg (Court Register) with the STATIS Intelligence Layer (SIL).
+    The plugin contributes the MVP Sudreg capability set required for the
+    Explain Company flow.
+
+  sil:
+    minimum_version: "0.1.0"
+
+  namespace: sudreg
+
+  contributes:
+    capabilities:
+      directory: capabilities
+    tools:
+      directory: tools
+    flows:
+      directory: flows
+    context_providers:
+      directory: context
+    policies:
+      directory: policies
+    approvals:
+      directory: approvals
+    personas:
+      directory: personas
+    agents:
+      directory: agents
+
+  mvp_flows:
+    - sudreg.company.explain
+
+  dependencies: []
+
+  audit:
+    include_plugin_identity: true
+    include_plugin_version: true
+    include_contributed_resource_ids: true

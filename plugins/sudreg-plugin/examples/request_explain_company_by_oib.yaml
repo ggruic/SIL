@@ -1,0 +1,9 @@
+request:
+  original_input:
+    text: "Explain company with OIB 12345678901"
+  intent: explain_company
+  entities:
+    company: null
+  parameters:
+    oib: "12345678901"
+    include_history: true
