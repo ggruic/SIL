@@ -32,6 +32,12 @@ This makes the Approval Engine the architectural boundary between governance dec
 
 SIL is built on the principle that human authority is preserved. High-impact or sensitive operations must not continue because an AI model was confident, because a Flow exists, or because the request appears reasonable. They may continue only when the organizational policy allows them to continue, and when the required human decision has actually been made by an authenticated and authorized approver. Approval exists to make that transition explicit, visible and auditable before any business operation begins.
 
+An approval requirement does **not** imply an asynchronous workflow or a separate approver.
+
+Architecturally, Approval represents a requirement for an explicit authorized human decision before execution may continue. Depending on organizational policy, that decision may be resolved immediately by the requesting user, immediately by another authorized participant, or through an external approval workflow.
+
+The Approval Engine is therefore responsible for resolving approval requirements rather than creating waiting states. Waiting is one possible resolution model, not the architectural definition of Approval.
+
 The Approval Engine exists to answer a small set of architectural questions:
 
 - Which Request requires human Approval because Policy said so?
@@ -477,6 +483,16 @@ A Request that reaches the Flow Engine after approval should still contain:
 
 This continuity is one of the reasons SIL remains explainable. A downstream engine or auditor should not have to reconstruct which plan was approved or why. The Request should already contain that full chain.
 
+## Approval Resolution Models
+
+| Resolution Model | Description | Typical Scenario |
+|---|---|---|
+| Inline Self-Approval | Requester is also authorized to approve. | OpenWebUI, developer tools |
+| Inline Delegated Approval | Another authorized participant approves during the same interaction. | Shared operational sessions |
+| External Approval Workflow | Approval is resolved outside the current interaction. | Production, four-eyes |
+
+These are different resolution models of the same architectural concept.
+
 ## Behavioural Rules
 
 ### Start approval only from explicit policy requirement
@@ -484,6 +500,12 @@ This continuity is one of the reasons SIL remains explainable. A downstream engi
 The Approval Engine should begin approval handling only when the Request carries an explicit policy outcome requiring Approval.
 
 This rule matters because approval must be a consequence of governance, not an improvised safety mechanism inserted ad hoc by downstream components or user interfaces.
+
+### Prefer immediate resolution when policy allows
+
+If Policy allows approval to be resolved by an authenticated and authorized actor already participating in the interaction, the Approval Engine should resolve it inline instead of creating an unnecessary waiting state.
+
+Waiting is a consequence of the selected resolution model, not the purpose of the Approval Engine.
 
 ### Never decide whether approval is required
 
@@ -762,6 +784,21 @@ Approve?
 
 This example is intentionally simple. The architectural point is not the exact wording. The point is that SIL should present approval in terms the approver can responsibly judge.
 
+### Example of inline self-approval
+
+```yaml
+policy:
+  decision: approval_required
+
+approval:
+  required: true
+  resolution_model: inline_self
+  approver: current_user
+  status: approved
+```
+
+In this example the requesting user is also authorized to approve the operation, so the Request continues immediately without entering a waiting state.
+
 ## Architecture Decisions
 
 ### AD-1401
@@ -811,6 +848,12 @@ Approval occurs before the Flow Engine begins and is therefore not modeled as a 
 Approval requests should be presented in business language.
 
 Approvers must be able to understand operational impact without inspecting technical implementation details.
+
+### AD-1409
+
+Approval defines an authorization requirement rather than an asynchronous workflow.
+
+Resolution may occur through inline self-approval, inline delegated approval or an external approval workflow. The architectural responsibility is explicit authorized human decision, not waiting.
 
 ## Future Evolution and Related Documents
 
